@@ -1468,6 +1468,140 @@ main {
   align-items: center;
   justify-content: flex-end;
 }
+
+.pin-icon {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+}
+.nav-symbol .pin-icon {
+  display: block;
+}
+.pin-control {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  flex-shrink: 0;
+  min-width: 27px;
+  min-height: 27px;
+  padding: 4px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  color: #7a8d6c;
+  background: transparent;
+  font: inherit;
+  font-size: 11px;
+}
+button.pin-control:hover {
+  color: var(--green);
+  background: #edf2e7;
+}
+.pin-control.is-pinned {
+  color: #426638;
+  background: #e8efdf;
+  border-color: #d4dfca;
+}
+.pin-control.is-pinned .pin-icon path:first-child {
+  fill: currentColor;
+  fill-opacity: 0.16;
+}
+.pin-control:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.pin-labeled {
+  padding-inline: 8px;
+}
+.detail-status-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.pin-picker {
+  position: relative;
+  max-width: 620px;
+  margin-bottom: 12px;
+}
+.pin-search-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 11px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--paper);
+  color: var(--muted);
+}
+.pin-search-field:focus-within {
+  border-color: #8fa775;
+}
+.pin-search-field input {
+  min-width: 0;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+}
+.pin-results {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 4;
+  max-height: min(360px, 50vh);
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--paper);
+  box-shadow: 0 8px 20px #243c2520;
+}
+#pin-matches {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+#pin-matches li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.pin-match-info {
+  flex: 1;
+  min-width: 0;
+}
+.pin-match-title,
+.pin-match-author {
+  display: block;
+  overflow-wrap: anywhere;
+  line-height: 1.4;
+}
+.pin-match-title {
+  font-size: 12px;
+}
+.pin-match-author {
+  margin-top: 3px;
+  font-size: 10px;
+  color: var(--muted);
+}
+#pin-search-status {
+  margin: 0;
+  padding: 8px 12px;
+  color: var(--muted);
+  font-size: 10px;
+}
 .row-refresh {
   background: none;
   border: 0;

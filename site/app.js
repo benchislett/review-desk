@@ -117,6 +117,7 @@ function readHash() {
     ![
       'all',
       'mine',
+      'pinned',
       'approved',
       'ready',
       'commented',
@@ -154,6 +155,7 @@ function render() {
   $('workspace').innerHTML =
     navItem('all', 'All pull requests', prs.length, '▤') +
     navItem('mine', 'My PRs', prs.filter((p) => p.mine).length, '⌘') +
+    navItem('pinned', 'Pinned', prs.filter((p) => p.pinned).length, pinIcon()) +
     navItem('approved', 'Approved', approvals.size, '✓') +
     navItem('ready', 'Ready', prs.filter((p) => p.ready).length, '✓') +
     (data.poolScope === 'authored-commented'
@@ -178,6 +180,7 @@ function render() {
     if (active) card.setAttribute('aria-current', 'page');
     else card.removeAttribute('aria-current');
   }
+  renderPinPicker();
   const velocityView = state.view === 'velocity';
   document.querySelector('main>.heading').hidden = velocityView;
   $('stats').hidden = velocityView;
@@ -191,29 +194,33 @@ function render() {
   $('view-title').textContent =
     state.view === 'all'
       ? 'All pull requests'
-      : state.view === 'mine'
-        ? 'My pull requests'
-        : state.view === 'ready'
-          ? 'Ready to merge'
-          : state.view === 'approved'
-            ? 'Approved by me'
-            : state.view === 'commented'
-              ? 'Commented-on pull requests'
-              : info[1];
+      : state.view === 'pinned'
+        ? 'Pinned pull requests'
+        : state.view === 'mine'
+          ? 'My pull requests'
+          : state.view === 'ready'
+            ? 'Ready to merge'
+            : state.view === 'approved'
+              ? 'Approved by me'
+              : state.view === 'commented'
+                ? 'Commented-on pull requests'
+                : info[1];
   $('view-description').textContent =
     state.view === 'all'
       ? data.poolScope === 'authored-commented'
         ? 'Open PRs you opened or commented on.'
         : 'Open PRs involving you.'
-      : state.view === 'mine'
-        ? `Open PRs you authored in ${data.repo}.`
-        : state.view === 'commented'
-          ? 'Open PRs with your conversation, inline, or written review comments.'
-          : state.view === 'ready'
-            ? 'PRs you authored or formally reviewed, with maintainer approval, passing checks, and a clean merge.'
-            : state.view === 'approved'
-              ? 'Open PRs with your current approval, including those still waiting on CI or merge.'
-              : info[2];
+      : state.view === 'pinned'
+        ? 'PRs you pinned for easy access.'
+        : state.view === 'mine'
+          ? `Open PRs you authored in ${data.repo}.`
+          : state.view === 'commented'
+            ? 'Open PRs with your conversation, inline, or written review comments.'
+            : state.view === 'ready'
+              ? 'PRs you authored or formally reviewed, with maintainer approval, passing checks, and a clean merge.'
+              : state.view === 'approved'
+                ? 'Open PRs with your current approval, including those still waiting on CI or merge.'
+                : info[2];
   const followupView = state.view === 'followup';
   const hideCommits = followupView && state.followup === 'replies';
   const commitOnlyCount = prs.filter(
@@ -228,15 +235,17 @@ function render() {
   visible = prs.filter(
     (p) =>
       (state.view === 'all' ||
-        (state.view === 'mine'
-          ? p.mine
-          : state.view === 'ready'
-            ? p.ready
-            : state.view === 'approved'
-              ? approvals.has(p.number)
-              : state.view === 'commented'
-                ? p.reasons.includes('Commenter')
-                : p.queue === state.view)) &&
+        (state.view === 'pinned'
+          ? p.pinned
+          : state.view === 'mine'
+            ? p.mine
+            : state.view === 'ready'
+              ? p.ready
+              : state.view === 'approved'
+                ? approvals.has(p.number)
+                : state.view === 'commented'
+                  ? p.reasons.includes('Commenter')
+                  : p.queue === state.view)) &&
       (state.involvement === 'all' ||
         (state.involvement === 'reviewer-mentioned'
           ? p.reasons.some((r) => r === 'Reviewer' || r.endsWith('mention'))
@@ -250,7 +259,9 @@ function render() {
       (!state.label || p.labels.includes(state.label)) &&
       (state.drafts === 'all' || (state.drafts === 'draft' ? p.isDraft : !p.isDraft)) &&
       (!query ||
-        `${p.title} #${p.number} ${p.author} ${p.labels.join(' ')}`.toLowerCase().includes(query)),
+        `${p.title} #${p.number} ${p.author} ${p.authorName || ''} ${p.labels.join(' ')}`
+          .toLowerCase()
+          .includes(query)),
   );
   visible.sort((a, b) =>
     state.sort === 'newest'
@@ -278,22 +289,32 @@ function render() {
           .map((l) => `<span class="label-pill">${esc(l)}</span>`)
           .join(
             '',
-          )}</div><button class="pr-title" data-pr="${p.number}" aria-label="View details for PR ${p.number}: ${esc(p.title)}">${esc(p.title)}</button><div class="pr-reason">${esc(state.view === 'ready' ? p.readiness.summary : state.view === 'approved' ? `You approved ${shortDate(approvals.get(p.number).at)} · ${p.readiness?.summary || p.reason}` : p.reason)}</div></td><td>${state.view === 'approved' ? '<span class="badge approved">Approved by you</span>' : badge(p, state.view === 'ready')}<div class="responsibility">${esc(state.view === 'ready' ? 'Merge on GitHub' : state.view === 'approved' ? 'Awaiting merge' : p.responsibility)}${!['ready', 'approved'].includes(state.view) && p.confidence === 'inferred' ? ' · inferred' : ''}</div></td><td><span class="age" title="${esc(fullDate(p.trigger.at))}">${age(p.trigger.at)}</span><span class="date-small">${shortDate(p.trigger.at)}</span></td><td><div class="row-actions">${bundle.live ? `<button class="row-refresh" data-refresh-pr="${p.number}" aria-label="Refresh PR ${p.number}" title="Refresh this PR"><span class="refresh-icon" aria-hidden="true">↻</span></button>` : ''}<a class="external" href="${esc(safeURL(p.url))}" target="_blank" rel="noopener noreferrer" aria-label="Open PR ${p.number} on GitHub">↗</a></div></td></tr>`,
+          )}</div><button class="pr-title" data-pr="${p.number}" aria-label="View details for PR ${p.number}: ${esc(p.title)}">${esc(p.title)}</button><div class="pr-reason">${esc(state.view === 'ready' ? p.readiness.summary : state.view === 'approved' ? `You approved ${shortDate(approvals.get(p.number).at)} · ${p.readiness?.summary || p.reason}` : p.reason)}</div></td><td>${state.view === 'approved' ? '<span class="badge approved">Approved by you</span>' : badge(p, state.view === 'ready')}<div class="responsibility">${esc(state.view === 'ready' ? 'Merge on GitHub' : state.view === 'approved' ? 'Awaiting merge' : p.responsibility)}${!['ready', 'approved'].includes(state.view) && p.confidence === 'inferred' ? ' · inferred' : ''}</div></td><td><span class="age" title="${esc(fullDate(p.trigger.at))}">${age(p.trigger.at)}</span><span class="date-small">${shortDate(p.trigger.at)}</span></td><td><div class="row-actions">${renderPinControl(p)}${bundle.live ? `<button class="row-refresh" data-refresh-pr="${p.number}" aria-label="Refresh PR ${p.number}" title="Refresh this PR"><span class="refresh-icon" aria-hidden="true">↻</span></button>` : ''}<a class="external" href="${esc(safeURL(p.url))}" target="_blank" rel="noopener noreferrer" aria-label="Open PR ${p.number} on GitHub">↗</a></div></td></tr>`,
     )
     .join('');
   $('empty').hidden = visible.length > 0;
   $('empty').querySelector('h3').textContent =
-    state.view === 'ready'
-      ? 'No PRs ready to merge'
-      : state.view === 'approved'
-        ? 'No open PRs with your approval'
-        : 'Nothing in this view';
+    state.view === 'pinned'
+      ? prs.some((p) => p.pinned)
+        ? 'No pins match your filters'
+        : 'No pinned PRs yet'
+      : state.view === 'ready'
+        ? 'No PRs ready to merge'
+        : state.view === 'approved'
+          ? 'No open PRs with your approval'
+          : 'Nothing in this view';
   $('empty').querySelector('p').textContent =
-    state.view === 'ready'
-      ? 'PRs need a maintainer approval, passing checks, and a clean merge.'
-      : state.view === 'approved'
-        ? 'Approved PRs stay here until they close, merge, or your approval is superseded or dismissed.'
-        : 'Try another queue or clear your filters.';
+    state.view === 'pinned'
+      ? prs.some((p) => p.pinned)
+        ? 'Clear your filters to see all pinned PRs.'
+        : bundle.live
+          ? 'Use the search above or a PR’s pin button to add one.'
+          : 'Open the live dashboard to pin PRs.'
+      : state.view === 'ready'
+        ? 'PRs need a maintainer approval, passing checks, and a clean merge.'
+        : state.view === 'approved'
+          ? 'Approved PRs stay here until they close, merge, or your approval is superseded or dismissed.'
+          : 'Try another queue or clear your filters.';
   $('rows').closest('table').hidden = !visible.length;
   if (bundle.live) updateLiveUI();
 }
@@ -302,7 +323,7 @@ function showDetails(number, { refresh = true } = {}) {
   if (!p) return;
   $('detail-number').textContent = `${data.repo} · PR #${p.number}`;
   $('detail-content').innerHTML =
-    `<div class="detail-status">${badge(p)}${bundle.live ? renderDismissalControl(p) : ''}</div><h2 id="detail-title">${esc(p.title)}</h2><div class="detail-meta">Opened by <b>${esc(p.author)}</b> · ${esc(fullDate(p.createdAt))}${p.isDraft ? ' · Draft' : ''}<br>In your pool: ${esc(p.reasons.join(' · '))}<br>${p.changedFiles} files · +${p.additions} / −${p.deletions}</div>${link(p.url, 'Open pull request ↗', 'github-button')}${bundle.live ? ` <button class="secondary-button" data-refresh-pr="${p.number}" aria-label="Refresh PR ${p.number}"><span class="refresh-icon" aria-hidden="true">↻</span> Refresh</button><span class="detail-refresh-state" id="detail-refresh-state"></span>` : ''}${renderReadiness(p)}<section class="evidence"><span class="eyebrow">WHY THIS IS HERE · ${esc(p.confidence.toUpperCase())}</span><h3>Next move: ${esc(p.responsibility)}</h3><p>${esc(p.reason)}</p>${p.dismissal ? `<p class="dismissed-source">Automatic priority: ${esc(shortNames[p.dismissal.automaticQueue])}</p>` : ''}</section>${renderSignalPreview(p)}${renderLastResponse(p)}<details><summary>PR description</summary><div class="description">${esc(p.body || 'No description.')}</div></details><h3>Discussion <span class="muted">· ${p.events.length} entries</span></h3><p>Conversation comments, inline comments, and submitted reviews. Newest first.</p><div id="timeline" class="timeline"></div><button id="show-all" class="secondary-button" ${p.events.length <= 40 ? 'hidden' : ''}>Show all ${p.events.length} entries</button>`;
+    `<div class="detail-status">${badge(p)}<div class="detail-status-actions">${renderPinControl(p, { label: true })}${bundle.live ? renderDismissalControl(p) : ''}</div></div><h2 id="detail-title">${esc(p.title)}</h2><div class="detail-meta">Opened by <b>${esc(p.author)}</b>${p.authorName ? ` · ${esc(p.authorName)}` : ''} · ${esc(fullDate(p.createdAt))}${p.isDraft ? ' · Draft' : ''}<br>In your pool: ${esc(p.reasons.join(' · '))}<br>${p.changedFiles} files · +${p.additions} / −${p.deletions}</div>${link(p.url, 'Open pull request ↗', 'github-button')}${bundle.live ? ` <button class="secondary-button" data-refresh-pr="${p.number}" aria-label="Refresh PR ${p.number}"><span class="refresh-icon" aria-hidden="true">↻</span> Refresh</button><span class="detail-refresh-state" id="detail-refresh-state"></span>` : ''}${renderReadiness(p)}${renderSignalPreview(p)}<section class="evidence"><span class="eyebrow">WHY THIS IS HERE · ${esc(p.confidence.toUpperCase())}</span><h3>Next move: ${esc(p.responsibility)}</h3><p>${esc(p.reason)}</p>${p.dismissal ? `<p class="dismissed-source">Automatic priority: ${esc(shortNames[p.dismissal.automaticQueue])}</p>` : ''}</section>${renderLastResponse(p)}<details><summary>PR description</summary><div class="description">${esc(p.body || 'No description.')}</div></details><h3>Discussion <span class="muted">· ${p.events.length} entries</span></h3><p>Conversation comments, inline comments, and submitted reviews. Newest first.</p><div id="timeline" class="timeline"></div><button id="show-all" class="secondary-button" ${p.events.length <= 40 ? 'hidden' : ''}>Show all ${p.events.length} entries</button>`;
   function timeline(all = false) {
     $('timeline').innerHTML =
       [...p.events]

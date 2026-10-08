@@ -20,6 +20,7 @@ import api_runtime
 from build import ROOT, load_bundle, render_html
 from collect import api
 from credentials import github_environment
+from pins import apply_pins, pin_key
 from triage import apply_dismissals, dismissal_key, dismissal_record
 from workflows import Workflows, write_json
 
@@ -58,6 +59,8 @@ class Engine:
         self.dismissals = (
             json.loads(self.dismissals_path.read_text()) if self.dismissals_path.exists() else {}
         )
+        self.pins_path = self.root / "results/pins.json"
+        self.pins = json.loads(self.pins_path.read_text()) if self.pins_path.exists() else {}
         self._reload_bundle()
         self.thread = threading.Thread(target=self._worker, daemon=True, name="review-desk-refresh")
         self.thread.start()
@@ -73,7 +76,35 @@ class Engine:
         if retained != self.dismissals:
             write_json(self.dismissals_path, retained)
         self.dismissals = retained
-        self.bundle = bundle
+        self.bundle = apply_pins(bundle, self.pins)
+
+    def set_pin(self, workspace, number, pinned):
+        with self.cv:
+            if type(pinned) is not bool:
+                raise ValueError("pinned must be a boolean")
+            if not isinstance(workspace, str) or workspace not in self.bundle["workspaces"]:
+                raise ValueError("Unknown workspace")
+            data = self.bundle["workspaces"][workspace]
+            pr = next(
+                (p for p in data["pullRequests"] if type(number) is int and p["number"] == number),
+                None,
+            )
+            if pr is None:
+                raise ValueError("PR is not in this workspace")
+            key = pin_key(data, pr)
+            if (key in self.pins) == pinned:
+                return self.get_bundle()
+            updated = dict(self.pins)
+            if pinned:
+                updated[key] = {"pinnedAt": dt.datetime.now(dt.timezone.utc).isoformat()}
+            else:
+                updated.pop(key, None)
+            write_json(self.pins_path, updated)
+            self.pins = updated
+            # Do not mutate a bundle while an HTTP thread may be serializing it.
+            self.bundle = apply_pins(copy.deepcopy(self.bundle), self.pins)
+            self.revision += 1
+            return self.get_bundle()
 
     def set_dismissal(self, workspace, number, dismissed, version):
         with self.cv:
@@ -107,6 +138,7 @@ class Engine:
             write_json(self.dismissals_path, updated)
             self.dismissals = updated
             self.bundle, _ = apply_dismissals(self.raw_bundle, self.dismissals)
+            apply_pins(self.bundle, self.pins)
             self.revision += 1
             return self.get_bundle()
 
@@ -441,6 +473,13 @@ class Handler(BaseHTTPRequestHandler):
                         payload.get("number"),
                         payload.get("dismissed"),
                         payload.get("activityVersion"),
+                    ),
+                )
+            if path == "/api/pin":
+                return self._send(
+                    200,
+                    engine.set_pin(
+                        payload.get("workspace"), payload.get("number"), payload.get("pinned")
                     ),
                 )
             if path == "/api/refresh":

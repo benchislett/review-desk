@@ -22,7 +22,8 @@ operations are read-only. Reviews and merges happen on GitHub.
 
 - Action queues with searchable PRs, detailed discussion previews, and dismissals
   that expire when new activity arrives.
-- **My PRs**, **Approved**, and **Ready to merge** views.
+- **My PRs**, **Pinned**, **Approved**, and **Ready to merge** views.
+- Persistent pins with a fuzzy-search picker for PRs already in the current workspace.
 - Daily, weekly, and monthly review velocity, including formal Comment reviews.
 - Shared global refresh progress, per-PR refresh, and refresh after returning from
   an explicitly opened PR link.
@@ -70,7 +71,7 @@ These files stay local and are ignored by Git:
 | --- | --- |
 | `tokens.local.sh` | GitHub credential; owner-only permissions required |
 | `config.local.toml` | GitHub login and review timezone |
-| `results/` | PR snapshots, review history, dismissals, refresh reports |
+| `results/` | PR snapshots, review history, pins, dismissals, refresh reports |
 | `.tmp/` | Refresh settings, caches, API telemetry, logs, browser artifacts |
 | `index.html` | Optional generated offline export |
 

@@ -55,8 +55,21 @@ sidebar shows the specific evidence behind each classification.
 
 ## Dismissals and independent views
 
+**Pinned** shows PRs you bookmarked using the pin button on a row, in the preview,
+or in the Pinned view's search picker. Search matches titles, PR numbers, author
+logins, and captured author display names, including partial and fuzzy matches.
+It searches the current workspace's whole indexed pool regardless of list filters.
+It never discovers or fetches PRs outside that pool. Display names arrive with
+normal PR detail refreshes; missing names require no separate profile request.
+
+Pins are shared across browser sessions and persist in `results/pins.json`, scoped
+by repository and tracked account. They work while refreshes are frozen and make
+no GitHub requests. Dismissals, new activity, and refreshes leave pins intact.
+PRs that leave the pool disappear from the view; a saved pin is restored if that
+PR later re-enters the indexed pool. Offline exports show saved pins read-only.
+
 **Dismiss current activity** moves a PR to Following. It stays in All PRs and any
-applicable My PRs, Approved, or Ready view. Undo restores automatic classification.
+applicable My PRs, Pinned, Approved, or Ready view. Undo restores automatic classification.
 Dismissals persist across sessions and restarts and make no GitHub requests.
 New human activity or changed priority evidence expires a dismissal; unchanged
 refreshes, bot comments, and CI command comments preserve it. A stale browser

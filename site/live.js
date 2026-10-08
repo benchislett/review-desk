@@ -79,6 +79,7 @@ function updateLiveUI() {
   if (!bundle.live) return;
   $('live-controls').hidden = false;
   $('offline-mode').hidden = true;
+  updatePinControls();
   for (const button of document.querySelectorAll('[data-dismiss-pr]'))
     button.disabled = dismissalPending.has(prKey(workspaceKey, Number(button.dataset.dismissPr)));
   const frozen = liveStatus?.frozen;
@@ -302,6 +303,12 @@ function initLive() {
   $('api-usage').onclick = toggleFreeze;
   $('detail-api-usage').onclick = toggleFreeze;
   document.addEventListener('click', (event) => {
+    const pin = event.target.closest('button[data-pin-pr]');
+    if (pin) {
+      event.preventDefault();
+      changePin(pin);
+      return;
+    }
     const dismissal = event.target.closest('[data-dismiss-pr]');
     if (dismissal) {
       event.preventDefault();

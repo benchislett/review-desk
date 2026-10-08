@@ -303,6 +303,7 @@ def classify(pr, user, *, include_commented=False):
     result.update(
         id=pr.get("id"),
         author=login(pr.get("author")),
+        authorName=(pr.get("author") or {}).get("name") or "",
         body=pr.get("body") or "",
         mine=mine,
         queue=queue,

@@ -81,6 +81,24 @@
             </div>
             <button id="export" class="secondary-button">↓ Export view</button>
           </div>
+          <div id="pin-picker" class="pin-picker" hidden>
+            <label class="pin-search-field">
+              <span aria-hidden="true">⌕</span>
+              <span class="sr-only">Search indexed pull requests to pin</span>
+              <input
+                type="search"
+                id="pin-search"
+                maxlength="120"
+                autocomplete="off"
+                placeholder="Add a pin: title, #PR, or author…"
+                aria-controls="pin-matches"
+              />
+            </label>
+            <div id="pin-results" class="pin-results" hidden>
+              <ul id="pin-matches" aria-label="Matching indexed pull requests"></ul>
+              <p id="pin-search-status" role="status" aria-live="polite"></p>
+            </div>
+          </div>
           <div class="filters">
             <label class="search"
               ><span aria-hidden="true">⌕</span
@@ -134,7 +152,7 @@
                   <th>
                     Signal age <span title="Age of the action signal at snapshot time">ⓘ</span>
                   </th>
-                  <th><span class="sr-only">Open on GitHub</span></th>
+                  <th><span class="sr-only">PR actions</span></th>
                 </tr>
               </thead>
               <tbody id="rows"></tbody>

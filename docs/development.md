@@ -12,6 +12,7 @@ below run from the repository root.
 | `scripts/collect.py`, `discover.py` | vLLM discovery and paginated detail reads |
 | `scripts/collect_participation.py` | Restricted FlashInfer author/commenter collection |
 | `scripts/classify.py`, `readiness.py`, `triage.py` | Priority, merge readiness, dismissals |
+| `scripts/pins.py` | Local bookmarks scoped to the indexed workspace and account |
 | `scripts/velocity.py` | Formal review collection and normalization |
 | `scripts/credentials.py`, `settings.py` | Private authentication and local preferences |
 | `scripts/build.py` | Shared data loading and HTML rendering |

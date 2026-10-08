@@ -41,7 +41,7 @@ ARGS = {
     "labels": "first:100",
     "timelineItems": "first:100",
 }
-BASE = """id number title body url createdAt updatedAt isDraft state author { login }
+BASE = """id number title body url createdAt updatedAt isDraft state author { login ... on User { name } }
 reviewDecision additions deletions changedFiles
 headRefOid mergeable mergeStateStatus isInMergeQueue isMergeQueueEnabled
 statusCheckRollup { state contexts { totalCount } }

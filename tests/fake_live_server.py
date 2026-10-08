@@ -154,6 +154,39 @@ engine.after_request(
 
 class FixtureHandler(Handler):
     def do_POST(self):
+        global engine
+        if self.path == "/test/restart":
+            if not self._trusted(write=True):
+                return self._send(403, {"error": "Local test only"})
+            if engine.active or engine.queue:
+                return self._send(409, {"error": "Wait for idle"})
+            engine.close()
+            engine = Engine(root, fake, startup_rate=False)
+            fake.engine = engine
+            self.server.engine = engine
+            return self._send(200, {"restarted": True})
+        if self.path == "/test/remove-pr":
+            if not self._trusted(write=True):
+                return self._send(403, {"error": "Local test only"})
+            payload = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+            path = (
+                root
+                / "results"
+                / (
+                    "snapshot.json"
+                    if payload["workspace"] == "vllm"
+                    else "flashinfer/snapshot.json"
+                )
+            )
+            data = json.loads(path.read_text())
+            data["pullRequests"] = [
+                p for p in data["pullRequests"] if p["number"] != payload["number"]
+            ]
+            with engine.cv:
+                write_json(path, data)
+                engine._reload_bundle()
+                engine.revision += 1
+            return self._send(200, {"removed": True})
         if self.path in ("/test/new-activity", "/test/failed-checks", "/test/revoke-approval"):
             if not self._trusted(write=True):
                 return self._send(403, {"error": "Local test only"})

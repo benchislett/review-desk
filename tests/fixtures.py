@@ -1,4 +1,4 @@
-"""Synthetic PRs shared by unit and browser tests; no account or network needed."""
+"""Synthetic PRs for browser checks; no account or network needed."""
 
 import copy
 import sys
@@ -30,6 +30,8 @@ def write_browser_fixture(root):
         item["labels"]["nodes"] = [{"name": "example"}]
         raws.append(item)
     mine, reply, commit, inline, draft, approved, assigned = raws
+    reply["author"]["name"] = "Jórdán Example"
+    reply["title"] = "Improve cache scheduling"
     mine["author"] = {"login": USER}
     mine["comments"]["nodes"] = [
         event(USER, 2, "Ready for review"),

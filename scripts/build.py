@@ -6,6 +6,7 @@ from pathlib import Path
 from urllib.parse import quote
 
 from classify import QUEUES
+from pins import apply_pins
 from triage import apply_dismissals
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -40,7 +41,7 @@ def render_html(bundle, root=ROOT):
         .replace(">", "\\u003e")
         .replace("&", "\\u0026")
     )
-    files = ["app.js", "workspaces.js", "preview.js", "velocity.js", "live.js"]
+    files = ["app.js", "workspaces.js", "preview.js", "velocity.js", "pins.js", "live.js"]
     js = (
         "\n".join(
             (root / "site" / name).read_text() for name in files if (root / "site" / name).exists()
@@ -63,6 +64,8 @@ def main():
     bundle = load_bundle()
     saved = ROOT / "results/dismissals.json"
     bundle, _ = apply_dismissals(bundle, json.loads(saved.read_text()) if saved.exists() else {})
+    saved_pins = ROOT / "results/pins.json"
+    apply_pins(bundle, json.loads(saved_pins.read_text()) if saved_pins.exists() else {})
     path = ROOT / "index.html"
     temp = path.with_suffix(".html.tmp")
     temp.write_text(render_html(bundle))

@@ -406,6 +406,146 @@ try {
   await a.run("document.querySelector('#detail').close()");
   const shot = await a.send('Page.captureScreenshot', { format: 'png' });
   await writeFile(root + '/.tmp/live-mobile.png', Buffer.from(shot.data, 'base64'));
+  // Pinning and fuzzy discovery use only the shared local index.
+  await a.run("switchWorkspace('vllm');reset();setView('all')");
+  await b.run("switchWorkspace('vllm');reset();setView('all')");
+  await a.run("localAPI('/api/freeze',{frozen:true})");
+  await a.run('pollLiveStatus()');
+  await until(a, 'liveStatus.frozen&&!liveStatus.active');
+  const beforePins = (await status()).sessionApiCalls;
+  assert.equal(
+    await a.run("document.querySelector('[data-view=pinned]').nextElementSibling.dataset.view"),
+    'approved',
+  );
+  const pinnedNumber = await a.run('prs[0].number');
+  await a.run(`document.querySelector('#rows [data-pin-pr="${pinnedNumber}"]').click()`);
+  await until(a, `prs.find(p=>p.number===${pinnedNumber}).pinned`);
+  assert.equal(await a.run("document.querySelector('#detail').open"), false);
+  await b.run('pollLiveStatus()');
+  await until(b, `prs.find(p=>p.number===${pinnedNumber}).pinned`);
+  await a.run("setView('pinned');readHash();render()");
+  assert.equal(await a.run('state.view'), 'pinned');
+  assert.deepEqual(await a.run('visible.map(p=>p.number)'), [pinnedNumber]);
+
+  assert.equal(await a.run("findPinMatches('cahce sched')[0].pr.number"), 2);
+  assert.equal(await a.run("findPinMatches('#2')[0].pr.number"), 2);
+  assert(await a.run("findPinMatches('@author').some(({pr})=>pr.number===2)"));
+  assert.equal(await a.run("findPinMatches('jrdn exmpl')[0].pr.number"), 2);
+  assert.equal(await a.run("findPinMatches('JORDAN')[0].pr.number"), 2);
+  await a.run(
+    "state.q='__hide_pinned_rows__';render();document.querySelector('#pin-search').focus();document.querySelector('#pin-search').value='jrdn exmpl';document.querySelector('#pin-search').dispatchEvent(new Event('input'))",
+  );
+  assert.equal(await a.run('visible.length'), 0);
+  assert.equal(await a.run("document.querySelectorAll('#pin-matches li').length"), 1);
+  assert(
+    await a.run("document.querySelector('#pin-matches').textContent.includes('Jórdán Example')"),
+  );
+  await a.run(
+    "document.querySelector('#pin-search').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true,cancelable:true}))",
+  );
+  await until(a, 'prs.find(p=>p.number===2).pinned&&!pinPending.size');
+  assert.equal(await a.run('document.activeElement.id'), 'pin-search');
+  await a.run("reset();setView('pinned')");
+  assert.equal(await a.run('visible.length'), 2);
+  await b.run('pollLiveStatus()');
+  await until(b, 'prs.find(p=>p.number===2).pinned');
+  for (const width of [1440, 390]) {
+    await a.send('Emulation.setDeviceMetricsOverride', {
+      width,
+      height: 950,
+      deviceScaleFactor: 1,
+      mobile: width < 500,
+    });
+    await a.run(
+      "document.querySelector('#pin-search').focus();document.querySelector('#pin-search').value='exmple';document.querySelector('#pin-search').dispatchEvent(new Event('input'))",
+    );
+    assert.equal(await a.run('document.documentElement.scrollWidth>innerWidth'), false);
+    const pinnedShot = await a.send('Page.captureScreenshot', { format: 'png' });
+    await writeFile(
+      root + '/.tmp/pinned-' + width + '.png',
+      Buffer.from(pinnedShot.data, 'base64'),
+    );
+  }
+  await a.run(
+    "document.querySelector('#pin-search').value='unmatchablezzzz';document.querySelector('#pin-search').dispatchEvent(new Event('input'))",
+  );
+  assert.equal(await a.run("document.querySelectorAll('#pin-matches li').length"), 0);
+  assert(
+    await a.run(
+      "document.querySelector('#pin-search-status').textContent.includes('indexed pool')",
+    ),
+  );
+  assert(
+    await a.run(
+      "(async()=>{try{await localAPI('/api/pin',{workspace:'vllm',number:999999,pinned:true});return false;}catch(e){return e.message.includes('not in this workspace');}})()",
+    ),
+  );
+  await a.run(
+    "document.querySelector('#pin-search').dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));showDetails(2,{refresh:false})",
+  );
+  await a.run("document.querySelector('#detail [data-dismiss-pr]').click()");
+  await until(a, 'prs.find(p=>p.number===2).dismissal');
+  assert(await a.run('prs.find(p=>p.number===2).pinned&&visible.some(p=>p.number===2)'));
+  await a.run("document.querySelector('#detail [data-dismiss-pr]').click()");
+  await until(a, '!prs.find(p=>p.number===2).dismissal');
+  await a.run("document.querySelector('#detail [data-pin-pr]').click()");
+  await until(a, '!prs.find(p=>p.number===2).pinned&&!pinPending.size');
+  assert(await a.run("document.querySelector('#detail').open"));
+  assert.equal(
+    await a.run("document.querySelector('#detail [data-pin-pr]').getAttribute('aria-pressed')"),
+    'false',
+  );
+  await a.run("document.querySelector('#detail [data-pin-pr]').click()");
+  await until(a, 'prs.find(p=>p.number===2).pinned&&!pinPending.size');
+  await a.run(
+    "document.querySelector('#detail').close();switchWorkspace('flashinfer');setView('pinned')",
+  );
+  assert.equal(await a.run('visible.length'), 0);
+  assert.equal(await a.run("document.querySelector('#pin-search').value"), '');
+  await a.run("setView('all');document.querySelector('#rows [data-pin-pr]').click()");
+  await until(a, 'prs.some(p=>p.pinned)&&!pinPending.size');
+  await a.run("setView('pinned')");
+  assert.equal(await a.run('visible.length'), 1);
+  await a.run("switchWorkspace('vllm');setView('pinned')");
+  assert.equal(await a.run('visible.length'), 2);
+  assert.equal(
+    (await status()).sessionApiCalls,
+    beforePins,
+    'Search, pin, unpin, and dismissal make no GitHub calls',
+  );
+  await a.run("localAPI('/test/restart',{})");
+  await a.send('Page.reload');
+  await until(
+    a,
+    "typeof liveStatus!=='undefined'&&liveStatus?.frozen&&state.view==='pinned'&&visible.length===2",
+  );
+  assert.equal((await status()).sessionApiCalls, 0, 'Restoring pins makes no GitHub calls');
+  await b.run('pollLiveStatus()');
+  await until(b, 'prs.filter(p=>p.pinned).length===2');
+  await a.run("localAPI('/api/freeze',{frozen:false})");
+  await a.run(`localAPI('/test/new-activity',{workspace:'vllm',number:${pinnedNumber}})`);
+  await a.run(`refreshPR('vllm',${pinnedNumber},'manual')`);
+  await until(
+    a,
+    `!liveStatus.active&&prs.find(p=>p.number===${pinnedNumber}).trigger.id.startsWith('test-mention-')`,
+  );
+  assert(
+    await a.run(`prs.find(p=>p.number===${pinnedNumber}).pinned`),
+    'New activity preserves pins',
+  );
+  await a.run(`document.querySelector('#rows [data-pin-pr="${pinnedNumber}"]').click()`);
+  await until(a, `!prs.find(p=>p.number===${pinnedNumber}).pinned&&!pinPending.size`);
+  assert.equal(await a.run('visible.length'), 1);
+  await b.run('pollLiveStatus()');
+  await until(b, `!prs.find(p=>p.number===${pinnedNumber}).pinned`);
+  await a.run("localAPI('/test/remove-pr',{workspace:'vllm',number:2})");
+  await a.run('pollLiveStatus()');
+  await until(a, '!prs.some(p=>p.number===2)&&visible.length===0');
+  assert.equal(
+    await a.run("findPinMatches('#2').length"),
+    0,
+    'Pins cannot keep removed PRs outside the indexed pool',
+  );
   assert.equal(errors.length, 0, JSON.stringify(errors));
   const report = {
     passed: true,
@@ -439,6 +579,15 @@ try {
       'discussion dismissal preserves Approved membership',
       'dismissed GitHub approval removes PR across sessions',
       'mobile layout',
+      'Pinned tab order and URL state',
+      'row and sidepanel pin controls',
+      'shared persistent pins across sessions and restart',
+      'pins work while frozen without API calls',
+      'pins survive dismissal and new activity',
+      'fuzzy title, number, login, and display-name search',
+      'keyboard pinning and search independent of view filters',
+      'workspace isolation and rejection outside the indexed pool',
+      'pinned desktop/mobile layout',
       'no JavaScript exceptions',
     ],
   };
