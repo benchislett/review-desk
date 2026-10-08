@@ -1,0 +1,17 @@
+# Local snapshots, dismissals, credentials, API logs, and scratch files.
+/.tmp/
+/results/
+/index.html
+/index.html.tmp
+/tokens.local.sh
+/config.local.toml
+.env
+.env.*
+!.env.example
+
+# Python caches.
+__pycache__/
+*.pyc
+.venv/
+.ruff_cache/
+node_modules/

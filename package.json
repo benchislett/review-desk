@@ -1,0 +1,13 @@
+{
+  "name": "review-desk",
+  "private": true,
+  "description": "Development tooling for the dependency-free Review Desk web client",
+  "scripts": {
+    "format": "prettier --write 'site/*.{js,css,html}' 'tests/*.mjs'",
+    "format:check": "prettier --check 'site/*.{js,css,html}' 'tests/*.mjs'",
+    "test": "node tests/browser.mjs && node tests/live-browser.mjs"
+  },
+  "devDependencies": {
+    "prettier": "3.6.2"
+  }
+}

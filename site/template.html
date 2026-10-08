@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <meta name="referrer" content="no-referrer" />
+    <title>Review Desk · vLLM</title>
+    <link rel="icon" type="image/svg+xml" href="/*__FAVICON__*/" />
+    <style>
+      /*__CSS__*/
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <a class="brand" href="#"><span class="brand-icon">↗</span><span>review desk</span></a>
+        <div class="repo workspace-picker">
+          <span class="repo-mark" id="repo-mark">V</span>
+          <div class="workspace-picker-content">
+            <label class="sr-only" for="workspace-select">Repository workspace</label
+            ><select id="workspace-select" aria-label="Repository workspace"></select
+            ><small id="workspace-role">Maintainer workspace</small>
+          </div>
+        </div>
+        <div class="nav-label">YOUR WORKSPACE</div>
+        <nav id="workspace" aria-label="Workspace"></nav>
+        <div id="queue-label" class="nav-label queue-label">
+          ACTION QUEUES <span>HIGH → LOW</span>
+        </div>
+        <nav id="queues" aria-label="Priority queues"></nav>
+        <div class="sidebar-note">
+          <button id="rules-button" class="text-button">Priority rules</button>
+        </div>
+        <div class="identity">
+          <span class="avatar" aria-hidden="true"></span>
+          <div id="identity"></div>
+        </div>
+      </aside>
+      <main>
+        <header class="topbar">
+          <span class="workspace-crumb"
+            ><span class="muted">Workspace</span><span class="slash">/</span>
+            <span id="workspace-breadcrumb">vLLM</span></span
+          ><span id="offline-mode" class="snapshot-label">STATIC SNAPSHOT</span>
+          <div class="refresh-slot">
+            <div
+              id="refresh-progress"
+              class="refresh-progress"
+              role="status"
+              aria-live="polite"
+              hidden
+            >
+              <div>
+                <span id="refresh-progress-text"></span><span id="refresh-progress-count"></span>
+              </div>
+              <progress id="refresh-progress-bar" max="1" value="0"></progress>
+            </div>
+          </div>
+          <div id="live-controls" class="live-controls" hidden>
+            <button
+              id="api-usage"
+              class="api-usage"
+              aria-label="GitHub API usage; toggle freeze"
+              aria-pressed="false"
+            >
+              API · connecting</button
+            ><button id="refresh-all" class="secondary-button" disabled>Refresh all</button>
+          </div>
+        </header>
+        <section class="heading queue-heading">
+          <h1>Review queue</h1>
+          <div class="snapshot-meta" id="snapshot-meta"></div>
+        </section>
+        <section class="stats" aria-label="Queue overview" id="stats"></section>
+        <section class="queue-section">
+          <div class="section-title">
+            <div>
+              <h2 id="view-title">All pull requests</h2>
+              <p id="view-description"></p>
+            </div>
+            <button id="export" class="secondary-button">↓ Export view</button>
+          </div>
+          <div class="filters">
+            <label class="search"
+              ><span aria-hidden="true">⌕</span
+              ><input
+                type="search"
+                id="search"
+                placeholder="Search title, #PR, author, or label…"
+                aria-label="Search pull requests"
+              /><kbd>/</kbd></label
+            ><select id="author" aria-label="Filter by author">
+              <option value="">All authors</option></select
+            ><select id="label" aria-label="Filter by label">
+              <option value="">All labels</option></select
+            ><select id="involvement" aria-label="Filter involvement">
+              <option value="all">All involvement</option>
+              <option value="reviewer-mentioned">Reviewer or mentioned</option>
+              <option value="reviewer">Reviewer</option>
+              <option value="mentioned">Mentioned</option>
+              <option value="assignee">Assignee</option></select
+            ><select id="drafts" aria-label="Filter drafts">
+              <option value="all">Include drafts</option>
+              <option value="ready">Ready for review</option>
+              <option value="draft">Drafts only</option>
+            </select>
+          </div>
+          <div id="followup-filter" class="followup-filter" hidden>
+            <label
+              ><input type="checkbox" id="hide-commit-updates" checked /> Hide commit-only
+              updates</label
+            ><span id="followup-filter-note"></span>
+          </div>
+          <div class="list-toolbar">
+            <span id="result-count" aria-live="polite"></span
+            ><button class="text-button" id="reset" hidden>Clear filters</button
+            ><label class="sort-label"
+              >Sort by
+              <select id="sort" aria-label="Sort pull requests">
+                <option value="signal">Newest signal first</option>
+                <option value="priority-newest">Priority, then newest signal</option>
+                <option value="oldest">Oldest action first</option>
+                <option value="newest">Recent human activity</option>
+              </select></label
+            >
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Pull request</th>
+                  <th>Next move</th>
+                  <th>
+                    Signal age <span title="Age of the action signal at snapshot time">ⓘ</span>
+                  </th>
+                  <th><span class="sr-only">Open on GitHub</span></th>
+                </tr>
+              </thead>
+              <tbody id="rows"></tbody>
+            </table>
+            <div id="empty" hidden>
+              <span>✓</span>
+              <h3>Nothing in this view</h3>
+              <p>Try another queue or clear your filters.</p>
+              <button class="secondary-button" id="empty-reset">Clear filters</button>
+            </div>
+          </div>
+          <footer><span id="coverage"></span></footer>
+        </section>
+        <section id="velocity" hidden>
+          <div class="heading queue-heading velocity-heading">
+            <h1>Review velocity</h1>
+            <p>Submitted reviews across open, closed, and merged PRs.</p>
+          </div>
+          <div class="velocity-summary stats" id="velocity-summary"></div>
+          <div class="section-title">
+            <div>
+              <h2>Reviews over time</h2>
+              <p>Count distinct PRs reviewed, or each formal review submission.</p>
+            </div>
+            <button id="velocity-export" class="secondary-button">↓ Export reviews</button>
+          </div>
+          <div class="velocity-controls">
+            <div class="segmented" role="group" aria-label="Review velocity period">
+              <button data-grain="day">Daily</button><button data-grain="week">Weekly</button
+              ><button data-grain="month">Monthly</button>
+            </div>
+            <label
+              >Window
+              <select id="velocity-range" aria-label="Review velocity time window">
+                <option value="30">Last 30 days</option>
+                <option value="90">Last 90 days</option>
+                <option value="365" selected>Last 365 days</option>
+                <option value="all">All collected history</option>
+              </select></label
+            ><label
+              >Measure
+              <select id="velocity-metric" aria-label="Review velocity measure">
+                <option value="prs">Distinct PRs reviewed</option>
+                <option value="submissions">Review submissions</option>
+              </select></label
+            >
+          </div>
+          <div class="velocity-chart-card">
+            <div class="chart-caption">
+              <b id="chart-title"></b><span id="chart-caption"></span>
+            </div>
+            <div
+              id="velocity-chart"
+              class="velocity-chart"
+              aria-label="Review velocity chart"
+            ></div>
+            <p class="chart-hint">
+              Select a bar to inspect its reviews. Zero-activity periods are included; edge periods
+              may be partial.
+            </p>
+          </div>
+          <div class="velocity-method">
+            <b>What counts?</b> A submitted GitHub review: Comment, Approve, or Request changes.
+            Dismissed reviews still count as work performed. Ordinary conversation comments,
+            unsubmitted reviews, and all bot activity are excluded.
+            <span id="velocity-zone"></span> A PR counts once per bucket, even if you reviewed it
+            several times; distinct-PR totals across buckets are not additive.
+          </div>
+          <div class="section-title velocity-table-title">
+            <div>
+              <h2 id="velocity-list-title">Review history</h2>
+              <p id="velocity-list-description"></p>
+            </div>
+            <button id="velocity-clear" class="text-button" hidden>Show whole window</button>
+          </div>
+          <div class="table-wrap velocity-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>Reviewed pull request</th>
+                  <th>Review</th>
+                  <th>Submitted</th>
+                  <th><span class="sr-only">Open review</span></th>
+                </tr>
+              </thead>
+              <tbody id="velocity-rows"></tbody>
+            </table>
+            <p id="velocity-empty" hidden>No submitted reviews in this period.</p>
+          </div>
+          <button id="velocity-more" class="secondary-button" hidden>Show all reviews</button>
+          <footer id="velocity-footer"></footer>
+        </section>
+      </main>
+    </div>
+    <dialog id="detail" aria-labelledby="detail-title">
+      <div class="dialog-head">
+        <div class="detail-context">
+          <span class="eyebrow" id="detail-number"></span>
+          <div class="detail-progress-slot">
+            <div id="detail-live-progress" class="detail-live-progress" role="status" hidden></div>
+          </div>
+        </div>
+        <div class="dialog-actions">
+          <button
+            id="detail-api-usage"
+            class="api-usage"
+            aria-label="GitHub API usage; toggle freeze"
+            aria-pressed="false"
+            hidden
+          >
+            API</button
+          ><button class="close" aria-label="Close PR details">×</button>
+        </div>
+      </div>
+      <div id="detail-content"></div>
+    </dialog>
+    <dialog id="rules" aria-labelledby="rules-title">
+      <div class="dialog-head">
+        <button class="close" aria-label="Close priority rules">×</button>
+      </div>
+      <h2 id="rules-title">What needs your attention?</h2>
+      <p>
+        Each PR gets one queue, using the first matching rule below. “My PRs” is a separate view
+        across all queues.
+      </p>
+      <div id="rule-list"></div>
+      <h3>What counts as a response?</h3>
+      <p>
+        A later conversation comment, inline comment, or submitted review from you anywhere on the
+        PR clears an earlier direct mention. A push alone does not. Description mentions put a PR in
+        the pool, but do not create a high-priority request.
+      </p>
+      <h3>Human activity only</h3>
+      <p>
+        Bot comments, reviews, thread replies, bot-authored commits, and comments starting with /ci
+        do not drive priorities or activity sorting. CI trigger comments also do not count as a
+        response to a mention. GitHub bot accounts and known review/CI service accounts are
+        excluded. Reviewer and assignee fields still describe your current responsibilities.
+      </p>
+      <h3>Signals, not certainty</h3>
+      <p>
+        Follow-ups and responsibility are heuristics, with evidence shown per PR. Commit timestamps
+        can be affected by rebases. A resolved thread does not erase an unanswered direct mention.
+        Edited comments use their creation time; we cannot reconstruct when a mention was added.
+        Team mentions are not individual mentions.
+      </p>
+      <h3>Snapshot scope</h3>
+      <p id="rules-coverage"></p>
+      <p>
+        The local server refreshes PRs when requested or when you open a preview. Refresh-on-return
+        requires clicking Open pull request or a row’s GitHub shortcut; switching tabs alone does
+        not trigger it. Use the API indicator to freeze refreshes across all sessions.
+        Authentication stays on the server; this page uses no credentials or third-party scripts.
+        The Ready view checks current maintainer approvals, CI results, and GitHub mergeability on
+        refresh. Merging takes place on GitHub.
+      </p>
+    </dialog>
+    <div id="live-toast" class="live-toast" role="status" aria-live="polite" hidden></div>
+    <script id="snapshot" type="application/json">
+      /*__DATA__*/
+    </script>
+    <script>
+      /*__JS__*/
+    </script>
+  </body>
+</html>

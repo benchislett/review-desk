@@ -1,0 +1,3 @@
+# Copy to config.local.toml and set the account whose PRs you want to track.
+github_user = "your-github-login"
+timezone = "UTC"

@@ -1,0 +1,6 @@
+{
+  "description": "Extra service-account logins excluded from activity. GitHub Bot actors and [bot] suffixes are always excluded. Matching is exact and case-insensitive.",
+  "logins": [
+    "github-actions", "github-actions[bot]", "dependabot", "renovate", "mergify", "mergebot", "vllm-mergebot", "vllm-bot", "vllm-agent", "vllm-ci", "vllm-ci-bot", "vllm-coverage", "vllm-coverage-bot", "ci-coverage-bot", "coverage-checker", "codecov", "coveralls", "gemini-code-assist", "gemini-code-assist[bot]", "claude", "claude-code", "claude-code-action", "claude-bot", "anthropic-claude", "codex", "openai-codex", "chatgpt-codex-connector", "cursor", "cursor-bot", "cursor-bugbot", "bugbot", "coderabbitai", "coderabbit", "copilot", "copilot-swe-agent", "depthfirst-app"
+  ]
+}
